@@ -4,6 +4,7 @@ using CounterStrikeSharp.API.Modules.Utils;
 
 using RetakesPlugin.Guns;
 using RetakesPlugin.Managers;
+using RetakesPlugin.Stats;
 using RetakesPlugin.Utils;
 
 namespace RetakesPlugin.Events;
@@ -14,13 +15,15 @@ public class PlayerEventHandlers
     private readonly GameManager _gameManager;
     private readonly HashSet<CCSPlayerController> _hasMutedVoices;
     private readonly GunsManager? _gunsManager;
+    private readonly StatsManager? _statsManager;
 
-    public PlayerEventHandlers(RetakesPlugin plugin, GameManager gameManager, HashSet<CCSPlayerController> hasMutedVoices, GunsManager? gunsManager = null)
+    public PlayerEventHandlers(RetakesPlugin plugin, GameManager gameManager, HashSet<CCSPlayerController> hasMutedVoices, GunsManager? gunsManager = null, StatsManager? statsManager = null)
     {
         _plugin = plugin;
         _gameManager = gameManager;
         _hasMutedVoices = hasMutedVoices;
         _gunsManager = gunsManager;
+        _statsManager = statsManager;
     }
 
     public HookResult OnPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
@@ -59,6 +62,7 @@ public class PlayerEventHandlers
 
         Logger.LogInfo("Player", $"{player.PlayerName} connected");
         _gunsManager?.LoadPlayer(player);
+        _statsManager?.LoadPlayer(player);
         return HookResult.Continue;
     }
 
@@ -99,16 +103,23 @@ public class PlayerEventHandlers
     public HookResult OnPlayerDeath(EventPlayerDeath @event, GameEventInfo info)
     {
         var attacker = @event.Attacker;
+        var victim   = @event.Userid;
         var assister = @event.Assister;
 
         if (PlayerHelper.IsValid(attacker))
         {
             _gameManager.AddKill(attacker);
+            if (attacker != victim)
+                _statsManager?.OnKill(attacker);
         }
+
+        if (PlayerHelper.IsValid(victim))
+            _statsManager?.OnDeath(victim);
 
         if (PlayerHelper.IsValid(assister))
         {
             _gameManager.AddAssist(assister);
+            _statsManager?.OnAssist(assister);
         }
 
         return HookResult.Continue;
@@ -126,6 +137,7 @@ public class PlayerEventHandlers
         _gameManager.QueueManager.RemovePlayerFromQueues(player);
         _hasMutedVoices.Remove(player);
         _gunsManager?.UnloadPlayer(player);
+        _statsManager?.UnloadPlayer(player);
 
         Logger.LogInfo("Player", $"{player.PlayerName} disconnected");
         return HookResult.Continue;

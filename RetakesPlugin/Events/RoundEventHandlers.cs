@@ -5,6 +5,7 @@ using CounterStrikeSharp.API.Modules.Utils;
 using RetakesPlugin.Utils;
 using RetakesPlugin.Managers;
 using RetakesPlugin.Services;
+using RetakesPlugin.Stats;
 using RetakesPlugin.Commands.SpawnEditor;
 using RetakesPluginShared.Enums;
 using RetakesPluginShared.Events;
@@ -24,6 +25,7 @@ public class RoundEventHandlers
     private readonly bool _enableFallbackBombsiteAnnouncement;
     private readonly Random _random;
     private ShowSpawnsCommand? _showSpawnsCommand;
+    private StatsManager? _statsManager;
 
     private Bombsite _currentBombsite = Bombsite.A;
     private CCSPlayerController? _planter;
@@ -44,6 +46,11 @@ public class RoundEventHandlers
         _random = random;
 
         Logger.LogInfo("RoundEventHandlers", $"EnableFallbackAllocation inicializado a: {_enableFallbackAllocation}");
+    }
+
+    public void SetStatsManager(StatsManager? statsManager)
+    {
+        _statsManager = statsManager;
     }
 
     public void SetCommandReferences(ShowSpawnsCommand? showSpawnsCommand)
@@ -219,12 +226,19 @@ public class RoundEventHandlers
     {
         _lastRoundWinner = (CsTeam)@event.Winner;
         Logger.LogInfo("Round", $"Round ended. Winner: {_lastRoundWinner}");
+
+        if (_statsManager != null && _lastRoundWinner != CsTeam.None)
+            _statsManager.OnRoundEnd(_gameManager.QueueManager.ActivePlayers, _lastRoundWinner);
+
         return HookResult.Continue;
     }
 
     public HookResult OnBombPlanted(EventBombPlanted @event, GameEventInfo info)
     {
         Logger.LogInfo("Round", "Bomb planted");
+
+        if (_planter != null && PlayerHelper.IsValid(_planter))
+            _statsManager?.OnPlant(_planter);
 
         _plugin.AddTimer(4.1f, () =>
         {
@@ -241,6 +255,7 @@ public class RoundEventHandlers
         if (PlayerHelper.IsValid(player))
         {
             _gameManager.AddDefuse(player);
+            _statsManager?.OnDefuse(player);
         }
 
         Logger.LogInfo("Round", $"Bomb defused by {player?.PlayerName ?? "unknown"}");

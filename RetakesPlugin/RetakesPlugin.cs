@@ -13,6 +13,7 @@ using RetakesPlugin.Guns;
 using RetakesPlugin.Managers;
 using RetakesPlugin.Modules;
 using RetakesPlugin.Services;
+using RetakesPlugin.Stats;
 using RetakesPlugin.Utils;
 
 using RetakesPlugin.Commands.Admin;
@@ -57,6 +58,7 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
     private RoundEventHandlers? _roundEventHandlers;
     private PlayerEventHandlers? _playerEventHandlers;
     private GunsManager? _gunsManager;
+    private StatsManager? _statsManager;
 
     public MapConfigService? MapConfigService => _mapConfigService;
     public SpawnManager? SpawnManager => _spawnManager;
@@ -76,6 +78,7 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
     // Player Commands
     private VoicesCommand? _voicesCommand;
     private GunsCommand? _gunsCommand;
+    private RankCommand? _rankCommand;
 
     // Spawn Editor Commands
     private ShowSpawnsCommand? _showSpawnsCommand;
@@ -192,6 +195,9 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
             _gunsManager = new GunsManager(gunsConfig, ModuleDirectory);
             _allocationService = new AllocationService(_random, _gunsManager);
 
+            // Initialize Stats / Rank subsystem
+            _statsManager = new StatsManager(ModuleDirectory, enablePersistence: true);
+
             _gameManager = new GameManager(
                 this,
                 new QueueManager(
@@ -236,7 +242,7 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
                 _random
             );
 
-            _playerEventHandlers = new PlayerEventHandlers(this, _gameManager, _hasMutedVoices, _gunsManager);
+            _playerEventHandlers = new PlayerEventHandlers(this, _gameManager, _hasMutedVoices, _gunsManager, _statsManager);
 
             // Initialize Commands
             _forceBombsiteCommand = new ForceBombsiteCommand(this, _roundEventHandlers);
@@ -251,7 +257,8 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
             _mapConfigsCommand = new MapConfigsCommand(this, ModuleDirectory);
 
             _voicesCommand = new VoicesCommand(this, Config, _hasMutedVoices);
-            _gunsCommand = new GunsCommand(_gunsManager);
+            _gunsCommand   = new GunsCommand(_gunsManager);
+            _rankCommand   = new RankCommand(_statsManager);
 
             _showSpawnsCommand = new ShowSpawnsCommand(this);
             _addSpawnCommand = new AddSpawnCommand(this, _showSpawnsCommand);
@@ -261,6 +268,7 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
 
             // Set command references in event handlers
             _roundEventHandlers?.SetCommandReferences(_showSpawnsCommand);
+            _roundEventHandlers?.SetStatsManager(_statsManager);
 
             // Register all commands
             RegisterCommands();
@@ -323,6 +331,14 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
             AddCommand("css_guns",      "Opens the weapon selection menu.",              _gunsCommand.OnGunsCommand);
             AddCommand("css_myguns",    "Displays your current weapon selections.",      _gunsCommand.OnMyGunsCommand);
             AddCommand("css_resetguns", "Resets your weapon selections to defaults.",    _gunsCommand.OnResetGunsCommand);
+        }
+
+        // Rank Commands
+        if (_rankCommand != null)
+        {
+            AddCommand("css_rank",  "Shows your current rank and stats.",  _rankCommand.OnRankCommand);
+            AddCommand("css_top",   "Shows the top 10 players by rank.",   _rankCommand.OnTopCommand);
+            AddCommand("css_stats", "Shows your current rank and stats.",  _rankCommand.OnRankCommand);
         }
 
         Utils.Logger.LogInfo("Commands", "All commands registered successfully");

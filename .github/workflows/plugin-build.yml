@@ -31,50 +31,88 @@ jobs:
       - name: Build RetakesPluginShared
         run: |
           cd RetakesPluginShared
-          dotnet build
-      
-      - name: Build RetakesPlugin
+          dotnet build -c Release
+
+      - name: Publish RetakesPlugin
         run: |
           cd RetakesPlugin
-          dotnet build
-      
+          dotnet publish -c Release --no-self-contained -o ../publish
+
       - name: Create output directory with complete structure
         run: |
-          mkdir -p output/addons/counterstrikesharp/plugins/RetakesPlugin
-          mkdir -p output/addons/counterstrikesharp/shared/RetakesPluginShared
-          
-          # Copy RetakesPlugin files
-          cp ./RetakesPlugin/bin/Debug/net8.0/RetakesPlugin.dll output/addons/counterstrikesharp/plugins/RetakesPlugin/
-          cp ./RetakesPlugin/bin/Debug/net8.0/RetakesPlugin.pdb output/addons/counterstrikesharp/plugins/RetakesPlugin/
-          cp -r ./RetakesPlugin/map_config output/addons/counterstrikesharp/plugins/RetakesPlugin/
-          cp -r ./RetakesPlugin/lang output/addons/counterstrikesharp/plugins/RetakesPlugin/
-          
-          # Copy RetakesPluginShared files
-          cp ./RetakesPluginShared/bin/Debug/net8.0/RetakesPluginShared.dll output/addons/counterstrikesharp/shared/RetakesPluginShared/
-          cp ./RetakesPluginShared/bin/Debug/net8.0/RetakesPluginShared.pdb output/addons/counterstrikesharp/shared/RetakesPluginShared/
-          cp ./RetakesPluginShared/bin/Debug/net8.0/RetakesPluginShared.deps.json output/addons/counterstrikesharp/shared/RetakesPluginShared/
-      
+          PLUGIN_SRC=publish
+          PLUGIN_DST=output/addons/counterstrikesharp/plugins/RetakesPlugin
+          SHARED_DST=output/addons/counterstrikesharp/shared/RetakesPluginShared
+
+          mkdir -p "$PLUGIN_DST/runtimes/linux-x64/native"
+          mkdir -p "$SHARED_DST"
+
+          # Core plugin DLLs
+          cp "$PLUGIN_SRC/RetakesPlugin.dll"  "$PLUGIN_DST/"
+          cp "$PLUGIN_SRC/RetakesPlugin.pdb"  "$PLUGIN_DST/"
+
+          # SQLite managed DLLs (not bundled with CounterStrikeSharp)
+          cp "$PLUGIN_SRC/Microsoft.Data.Sqlite.dll"              "$PLUGIN_DST/"
+          cp "$PLUGIN_SRC/SQLitePCLRaw.batteries_v2.dll"          "$PLUGIN_DST/"
+          cp "$PLUGIN_SRC/SQLitePCLRaw.core.dll"                  "$PLUGIN_DST/"
+          cp "$PLUGIN_SRC/SQLitePCLRaw.provider.e_sqlite3.dll"    "$PLUGIN_DST/"
+
+          # Native SQLite binary – placed in plugin root so the NativeLibrary
+          # resolver finds it first (CSS does not probe runtimes/ automatically)
+          cp "$PLUGIN_SRC/runtimes/linux-x64/native/libe_sqlite3.so" "$PLUGIN_DST/"
+          # Also keep a copy in the standard runtimes path as fallback
+          cp "$PLUGIN_SRC/runtimes/linux-x64/native/libe_sqlite3.so" \
+             "$PLUGIN_DST/runtimes/linux-x64/native/"
+
+          # Static assets
+          cp -r ./RetakesPlugin/map_config "$PLUGIN_DST/"
+          cp -r ./RetakesPlugin/lang       "$PLUGIN_DST/"
+
+          # Shared library
+          cp ./RetakesPluginShared/bin/Release/net8.0/RetakesPluginShared.dll        "$SHARED_DST/"
+          cp ./RetakesPluginShared/bin/Release/net8.0/RetakesPluginShared.pdb        "$SHARED_DST/"
+          cp ./RetakesPluginShared/bin/Release/net8.0/RetakesPluginShared.deps.json  "$SHARED_DST/"
+
       - name: Create output directory without map configs
         run: |
-          mkdir -p output-no-map-configs/addons/counterstrikesharp/plugins/RetakesPlugin
-          mkdir -p output-no-map-configs/addons/counterstrikesharp/shared/RetakesPluginShared
-          
-          # Copy RetakesPlugin files (without map_config)
-          cp ./RetakesPlugin/bin/Debug/net8.0/RetakesPlugin.dll output-no-map-configs/addons/counterstrikesharp/plugins/RetakesPlugin/
-          cp ./RetakesPlugin/bin/Debug/net8.0/RetakesPlugin.pdb output-no-map-configs/addons/counterstrikesharp/plugins/RetakesPlugin/
-          cp -r ./RetakesPlugin/lang output-no-map-configs/addons/counterstrikesharp/plugins/RetakesPlugin/
-          
-          # Copy RetakesPluginShared files
-          cp ./RetakesPluginShared/bin/Debug/net8.0/RetakesPluginShared.dll output-no-map-configs/addons/counterstrikesharp/shared/RetakesPluginShared/
-          cp ./RetakesPluginShared/bin/Debug/net8.0/RetakesPluginShared.pdb output-no-map-configs/addons/counterstrikesharp/shared/RetakesPluginShared/
-          cp ./RetakesPluginShared/bin/Debug/net8.0/RetakesPluginShared.deps.json output-no-map-configs/addons/counterstrikesharp/shared/RetakesPluginShared/
+          PLUGIN_SRC=publish
+          PLUGIN_DST=output-no-map-configs/addons/counterstrikesharp/plugins/RetakesPlugin
+          SHARED_DST=output-no-map-configs/addons/counterstrikesharp/shared/RetakesPluginShared
+
+          mkdir -p "$PLUGIN_DST/runtimes/linux-x64/native"
+          mkdir -p "$SHARED_DST"
+
+          # Core plugin DLLs
+          cp "$PLUGIN_SRC/RetakesPlugin.dll"  "$PLUGIN_DST/"
+          cp "$PLUGIN_SRC/RetakesPlugin.pdb"  "$PLUGIN_DST/"
+
+          # SQLite managed DLLs (not bundled with CounterStrikeSharp)
+          cp "$PLUGIN_SRC/Microsoft.Data.Sqlite.dll"              "$PLUGIN_DST/"
+          cp "$PLUGIN_SRC/SQLitePCLRaw.batteries_v2.dll"          "$PLUGIN_DST/"
+          cp "$PLUGIN_SRC/SQLitePCLRaw.core.dll"                  "$PLUGIN_DST/"
+          cp "$PLUGIN_SRC/SQLitePCLRaw.provider.e_sqlite3.dll"    "$PLUGIN_DST/"
+
+          # Native SQLite binary – placed in plugin root so the NativeLibrary
+          # resolver finds it first (CSS does not probe runtimes/ automatically)
+          cp "$PLUGIN_SRC/runtimes/linux-x64/native/libe_sqlite3.so" "$PLUGIN_DST/"
+          # Also keep a copy in the standard runtimes path as fallback
+          cp "$PLUGIN_SRC/runtimes/linux-x64/native/libe_sqlite3.so" \
+             "$PLUGIN_DST/runtimes/linux-x64/native/"
+
+          # Static assets (no map_config)
+          cp -r ./RetakesPlugin/lang "$PLUGIN_DST/"
+
+          # Shared library
+          cp ./RetakesPluginShared/bin/Release/net8.0/RetakesPluginShared.dll        "$SHARED_DST/"
+          cp ./RetakesPluginShared/bin/Release/net8.0/RetakesPluginShared.pdb        "$SHARED_DST/"
+          cp ./RetakesPluginShared/bin/Release/net8.0/RetakesPluginShared.deps.json  "$SHARED_DST/"
       
       - name: Publish artifact (with map configs)
         uses: actions/upload-artifact@v4
         with:
           name: RetakesPlugin-${{ github.sha }}
           path: output
-      
+
       - name: Publish artifact (no map configs)
         uses: actions/upload-artifact@v4
         with:

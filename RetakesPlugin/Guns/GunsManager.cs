@@ -103,6 +103,7 @@ public class GunsManager
         Config = config;
         if (config.EnablePersistence)
         {
+            GunsDatabase.InitializeNative(moduleDirectory);
             _database = new GunsDatabase(moduleDirectory);
         }
     }

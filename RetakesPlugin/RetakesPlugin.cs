@@ -9,6 +9,7 @@ using System.Text.Json;
 using RetakesPlugin.Configs;
 using RetakesPlugin.Configs.JsonConverters;
 using RetakesPlugin.Events;
+using RetakesPlugin.Guns;
 using RetakesPlugin.Managers;
 using RetakesPlugin.Modules;
 using RetakesPlugin.Services;
@@ -55,6 +56,7 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
     private AnnouncementService? _announcementService;
     private RoundEventHandlers? _roundEventHandlers;
     private PlayerEventHandlers? _playerEventHandlers;
+    private GunsManager? _gunsManager;
 
     public MapConfigService? MapConfigService => _mapConfigService;
     public SpawnManager? SpawnManager => _spawnManager;
@@ -73,6 +75,7 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
 
     // Player Commands
     private VoicesCommand? _voicesCommand;
+    private GunsCommand? _gunsCommand;
 
     // Spawn Editor Commands
     private ShowSpawnsCommand? _showSpawnsCommand;
@@ -148,6 +151,31 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
         InitializeServices(mapName);
     }
 
+    private GunsConfig LoadGunsConfig()
+    {
+        var configPath = Path.Combine(ModuleDirectory, "GunsConfig.json");
+        if (!File.Exists(configPath))
+        {
+            var defaultConfig = new GunsConfig();
+            File.WriteAllText(configPath, JsonSerializer.Serialize(defaultConfig, _jsonOptions));
+            Utils.Logger.LogInfo("Retakes Guns", "Created default GunsConfig.json");
+            return defaultConfig;
+        }
+
+        try
+        {
+            var json = File.ReadAllText(configPath);
+            var loaded = JsonSerializer.Deserialize<GunsConfig>(json) ?? new GunsConfig();
+            Utils.Logger.LogInfo("Retakes Guns", "GunsConfig.json loaded");
+            return loaded;
+        }
+        catch (Exception ex)
+        {
+            Utils.Logger.LogException("Retakes Guns", ex);
+            return new GunsConfig();
+        }
+    }
+
     private void InitializeServices(string mapName, string? customMapConfig = null)
     {
         try
@@ -158,7 +186,11 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
 
             // Initialize Managers
             _spawnManager = new SpawnManager(_mapConfigService);
-            _allocationService = new AllocationService(_random);
+
+            // Initialize Guns subsystem
+            var gunsConfig = LoadGunsConfig();
+            _gunsManager = new GunsManager(gunsConfig, ModuleDirectory);
+            _allocationService = new AllocationService(_random, _gunsManager);
 
             _gameManager = new GameManager(
                 this,
@@ -204,7 +236,7 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
                 _random
             );
 
-            _playerEventHandlers = new PlayerEventHandlers(this, _gameManager, _hasMutedVoices);
+            _playerEventHandlers = new PlayerEventHandlers(this, _gameManager, _hasMutedVoices, _gunsManager);
 
             // Initialize Commands
             _forceBombsiteCommand = new ForceBombsiteCommand(this, _roundEventHandlers);
@@ -219,6 +251,7 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
             _mapConfigsCommand = new MapConfigsCommand(this, ModuleDirectory);
 
             _voicesCommand = new VoicesCommand(this, Config, _hasMutedVoices);
+            _gunsCommand = new GunsCommand(_gunsManager);
 
             _showSpawnsCommand = new ShowSpawnsCommand(this);
             _addSpawnCommand = new AddSpawnCommand(this, _showSpawnsCommand);
@@ -283,6 +316,14 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
 
         // Player Commands
         AddCommand("css_voices", "Toggles whether or not you want to hear bombsite voice announcements.", _voicesCommand.OnCommand);
+
+        // Guns Commands
+        if (_gunsCommand != null)
+        {
+            AddCommand("css_guns",      "Opens the weapon selection menu.",              _gunsCommand.OnGunsCommand);
+            AddCommand("css_myguns",    "Displays your current weapon selections.",      _gunsCommand.OnMyGunsCommand);
+            AddCommand("css_resetguns", "Resets your weapon selections to defaults.",    _gunsCommand.OnResetGunsCommand);
+        }
 
         Utils.Logger.LogInfo("Commands", "All commands registered successfully");
     }

@@ -2,6 +2,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Utils;
 
+using RetakesPlugin.Guns;
 using RetakesPlugin.Managers;
 using RetakesPlugin.Utils;
 
@@ -12,12 +13,14 @@ public class PlayerEventHandlers
     private readonly RetakesPlugin _plugin;
     private readonly GameManager _gameManager;
     private readonly HashSet<CCSPlayerController> _hasMutedVoices;
+    private readonly GunsManager? _gunsManager;
 
-    public PlayerEventHandlers(RetakesPlugin plugin, GameManager gameManager, HashSet<CCSPlayerController> hasMutedVoices)
+    public PlayerEventHandlers(RetakesPlugin plugin, GameManager gameManager, HashSet<CCSPlayerController> hasMutedVoices, GunsManager? gunsManager = null)
     {
         _plugin = plugin;
         _gameManager = gameManager;
         _hasMutedVoices = hasMutedVoices;
+        _gunsManager = gunsManager;
     }
 
     public HookResult OnPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
@@ -55,6 +58,7 @@ public class PlayerEventHandlers
         }
 
         Logger.LogInfo("Player", $"{player.PlayerName} connected");
+        _gunsManager?.LoadPlayer(player);
         return HookResult.Continue;
     }
 
@@ -121,6 +125,7 @@ public class PlayerEventHandlers
 
         _gameManager.QueueManager.RemovePlayerFromQueues(player);
         _hasMutedVoices.Remove(player);
+        _gunsManager?.UnloadPlayer(player);
 
         Logger.LogInfo("Player", $"{player.PlayerName} disconnected");
         return HookResult.Continue;

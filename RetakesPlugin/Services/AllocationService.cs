@@ -27,18 +27,42 @@ public class AllocationService
 
     private void AllocateEquipment(CCSPlayerController player)
     {
-        player.GiveNamedItem(CsItem.KevlarHelmet);
+        try
+        {
+            player.GiveNamedItem(CsItem.KevlarHelmet);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Allocation", $"Error giving kevlar helmet to {player.PlayerName}: {ex.Message}");
+        }
 
-        if (
-            player.Team == CsTeam.CounterTerrorist
-            && player.PlayerPawn.IsValid
-            && player.PlayerPawn.Value != null
-            && player.PlayerPawn.Value.IsValid
-            && player.PlayerPawn.Value.ItemServices != null
-        )
+        // Validate all prerequisites before accessing ItemServices
+        if (player.Team != CsTeam.CounterTerrorist)
+        {
+            return;
+        }
+
+        if (!player.PlayerPawn.IsValid || player.PlayerPawn.Value == null || !player.PlayerPawn.Value.IsValid)
+        {
+            return;
+        }
+
+        if (player.PlayerPawn.Value.ItemServices == null || player.PlayerPawn.Value.ItemServices.Handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        try
         {
             var itemServices = new CCSPlayer_ItemServices(player.PlayerPawn.Value.ItemServices.Handle);
-            itemServices.HasDefuser = true;
+            if (itemServices != null)
+            {
+                itemServices.HasDefuser = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Allocation", $"Error allocating defuser to {player.PlayerName}: {ex.Message}");
         }
     }
 

@@ -53,11 +53,39 @@ public class BombService
         plantedC4.BombTicking = true;
         plantedC4.CannotBeDefused = false;
 
+        // Set timer very high so the 10-second warning music never plays during a retake round.
+        // Round will end before the bomb timer expires.
+        plantedC4.TimerLength = 9999f;
+        plantedC4.C4Blow = Server.CurrentTime + 9999f;
+
         plantedC4.DispatchSpawn();
 
-        var gameRules = GameRulesHelper.GetGameRules();
-        gameRules.BombPlanted = true;
-        gameRules.BombDefused = false;
+        // Revalidate player before continuing - validity may have expired
+        if (!player.IsValid || player.PlayerPawn.Value == null)
+        {
+            Logger.LogWarning("Bomb", $"Cannot plant bomb: player {player.PlayerName} is no longer valid");
+            plantedC4.Remove();
+            return;
+        }
+
+        try
+        {
+            var gameRules = GameRulesHelper.GetGameRules();
+            if (gameRules == null)
+            {
+                Logger.LogWarning("Bomb", "Cannot plant bomb: game rules are not available");
+                plantedC4.Remove();
+                return;
+            }
+            gameRules.BombPlanted = true;
+            gameRules.BombDefused = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Bomb", $"Error setting bomb planted state: {ex.Message}");
+            plantedC4.Remove();
+            return;
+        }
 
         SendBombPlantedEvent(player, bombsite);
 

@@ -119,8 +119,16 @@ public class SpawnManager
 
             var spawn = player == planter ? randomPlanterSpawn : spawns[team][_random.Next(count)];
 
-            player.Pawn.Value!.Teleport(spawn.Vector, spawn.QAngle, new Vector());
-            spawns[team].Remove(spawn);
+            // Revalidate pawn before teleporting - it may have been invalidated
+            if (player.PlayerPawn.IsValid && player.PlayerPawn.Value != null)
+            {
+                player.PlayerPawn.Value.Teleport(spawn.Vector, spawn.QAngle, new Vector());
+                spawns[team].Remove(spawn);
+            }
+            else
+            {
+                Logger.LogWarning("SpawnManager", $"Cannot teleport player {player.PlayerName}: pawn is invalid");
+            }
         }
 
         Logger.LogInfo("SpawnManager", $"Players moved to spawns. Planter: {planter?.PlayerName ?? "None"}");

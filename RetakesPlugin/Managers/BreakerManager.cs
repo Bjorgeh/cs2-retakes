@@ -70,6 +70,12 @@ public class BreakerManager
                     continue;
                 }
 
+                // Safety check: ensure handle is valid before dereferencing
+                if (pEntity.Handle == IntPtr.Zero)
+                {
+                    break;
+                }
+
                 switch (pEntity.DesignerName)
                 {
                     case "func_breakable":
@@ -77,31 +83,52 @@ public class BreakerManager
                     case "prop_dynamic":
                     case "prop.breakable.01":
                     case "prop.breakable.02":
-                        var breakableEntity = new PointerTo<CBreakable>(pEntity.Handle).Value;
-                        if (breakableEntity.IsValid)
+                        try
                         {
-                            breakableEntity.AcceptInput(action);
-                            entitiesProcessed++;
+                            var breakableEntity = new PointerTo<CBreakable>(pEntity.Handle).Value;
+                            if (breakableEntity != null && breakableEntity.IsValid)
+                            {
+                                breakableEntity.AcceptInput(action);
+                                entitiesProcessed++;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError("BreakerManager", $"Error processing breakable entity: {ex.Message}");
                         }
 
                         break;
 
                     case "func_button":
-                        var button = new PointerTo<CBaseButton>(pEntity.Handle).Value;
-                        if (button.IsValid)
+                        try
                         {
-                            button.AcceptInput(action);
-                            entitiesProcessed++;
+                            var button = new PointerTo<CBaseButton>(pEntity.Handle).Value;
+                            if (button != null && button.IsValid)
+                            {
+                                button.AcceptInput(action);
+                                entitiesProcessed++;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError("BreakerManager", $"Error processing button entity: {ex.Message}");
                         }
 
                         break;
 
                     case "prop_door_rotating":
-                        var propDoorRotating = new PointerTo<CPropDoorRotating>(pEntity.Handle).Value;
-                        if (propDoorRotating.IsValid)
+                        try
                         {
-                            propDoorRotating.AcceptInput(action);
-                            entitiesProcessed++;
+                            var propDoorRotating = new PointerTo<CPropDoorRotating>(pEntity.Handle).Value;
+                            if (propDoorRotating != null && propDoorRotating.IsValid)
+                            {
+                                propDoorRotating.AcceptInput(action);
+                                entitiesProcessed++;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError("BreakerManager", $"Error processing door entity: {ex.Message}");
                         }
 
                         break;

@@ -20,21 +20,21 @@ public static class GameRulesHelper
         return gameRulesProxy.GameRules;
     }
 
-    public static CCSGameRules GetGameRules()
+    public static CCSGameRules? GetGameRules()
     {
-        var gameRules = GetGameRulesOrNull();
-
-        if (gameRules == null)
-        {
-            throw new InvalidOperationException("Game rules are not available yet. The server may still be initializing.");
-        }
-
-        return gameRules;
+        return GetGameRulesOrNull();
     }
 
     public static void RestartGame()
     {
-        if (!GetGameRules().WarmupPeriod)
+        var gameRules = GetGameRules();
+        if (gameRules == null)
+        {
+            Logger.LogWarning("GameRules", "Cannot restart game: game rules not available");
+            return;
+        }
+
+        if (!gameRules.WarmupPeriod)
         {
             CheckRoundDone();
         }
@@ -55,9 +55,16 @@ public static class GameRulesHelper
 
     public static void TerminateRound(RoundEndReason roundEndReason)
     {
+        var gameRules = GetGameRules();
+        if (gameRules == null)
+        {
+            Logger.LogWarning("GameRules", "Cannot terminate round: game rules not available");
+            return;
+        }
+
         try
         {
-            GetGameRules().TerminateRound(0.1f, roundEndReason);
+            gameRules.TerminateRound(0.1f, roundEndReason);
         }
         catch
         {

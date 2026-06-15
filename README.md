@@ -1,15 +1,17 @@
-[![GitHub Downloads](https://img.shields.io/github/downloads/b3none/cs2-retakes/total.svg?style=flat-square&label=Downloads)](https://github.com/b3none/cs2-retakes/releases/latest)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/b3none/cs2-retakes/plugin-build.yml?branch=master&style=flat-square&label=Latest%20Build)
+[![GitHub Downloads](https://img.shields.io/github/downloads/Bjorgeh/cs2-retakes/total.svg?style=flat-square&label=Downloads)](https://github.com/Bjorgeh/cs2-retakes/releases/latest)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Bjorgeh/cs2-retakes/plugin-build.yml?branch=master&style=flat-square&label=Latest%20Build)
 
 # CS2 Retakes
-CS2 implementation of retakes written in C# for CounterStrikeSharp. Based on the version for CS:GO by Splewis.
+CS2 retakes plugin written in C# for CounterStrikeSharp. Forked from [B3none/cs2-retakes](https://github.com/B3none/cs2-retakes) with custom features added.
 
-## Share the love
-If you appreciate the project then please take the time to star the repository 🙏
+## Custom features (this fork)
+- **Ranking system** — Players earn points for kills, deaths, assists, plants, defuses and round wins/losses. Rank abbreviation shown as clan tag (e.g. `[GN1]`) and rank icon shown in scoreboard.
+- **Admin indicator** — Admins with `@css/root` get a `★` suffix in their clan tag (e.g. `[GN1] ★`).
+- **Insta-defuse** — If all Terrorists die while the bomb is planted, the round ends immediately as a CT win (BombDefused) instead of waiting for the timer.
+- **Queue improvements** — Players who try to join during warmup are placed in queue and promoted automatically when a slot opens. A custom message is shown when a player is already in the queue.
+- **Stats persistence** — Kill/death/assist/plant/defuse stats are saved to a local SQLite database and restored on reconnect.
 
-![Star us](https://github.com/b3none/gdprconsent/raw/development/.github/README_ASSETS/star_us.png)
-
-## Features / Roadmap
+## Features
 - [x] Bombsite selection
 - [x] Per map configurations
 - [x] Ability to add spawns
@@ -27,30 +29,23 @@ If you appreciate the project then please take the time to star the repository �
 - [x] Add a command to view the spawns for the current bombsite
 - [x] Add a command to delete the nearest spawn
 - [x] Implement better spawn management system
-- [x] Add a release zip file without spawns too
+- [x] Ranking system with persistent stats
+- [x] Insta-defuse on last T death with bomb planted
 
 ## Installation
 1. Install [CounterStrike Sharp](https://github.com/roflmuffin/CounterStrikeSharp) and [Metamod:Source](https://www.sourcemm.net/downloads.php/?branch=master)
-2. Download the plugin from the [releases section](https://github.com/B3none/cs2-retakes/releases/latest):
+2. Download the plugin from the [releases section](https://github.com/Bjorgeh/cs2-retakes/releases/latest):
    - **RetakesPlugin-[version].zip** - Includes pre-configured map spawns (recommended for new installations)
    - **RetakesPlugin-[version]-no-map-configs.zip** - Without map configurations (for custom setups)
 3. Unzip the archive and upload it to the game server into your `addons/counterstrikesharp/` directory.
 4. Start the server and wait for the config.json file to be generated in `addons/counterstrikesharp/configs/plugins/RetakesPlugin`.
 5. Complete the configuration file with the parameters of your choice.
 
-## Recommendations
-I also recommend installing these plugins for an improved player experience
-- Instadefuse: https://github.com/B3none/cs2-instadefuse
-- Clutch Announce: https://github.com/B3none/cs2-clutch-announce
-- Instaplant (if not using autoplant): https://github.com/B3none/cs2-instaplant
-
 ## Allocators
-Although this plugin comes with it's own weapon allocation system, I would recommend using **one** of the following plugins for a better experience:
+Although this plugin comes with its own weapon allocation system, you can also use one of the following plugins for a more customisable experience:
 - Yoni's Allocator: https://github.com/yonilerner/cs2-retakes-allocator
 - NokkviReyr's Allocator: https://github.com/nokkvireyr/kps-allocator
 - Ravid's Allocator: https://github.com/Ravid-A/cs2-retakes-weapon-allocator
-
-If you'd like to add your own allocator here, make a PR to add it :+1:
 
 ## Configuration
 When the plugin is first loaded it will create a `retakes_config.json` file in the plugin directory. This file contains all of the configuration options for the plugin:
@@ -90,15 +85,7 @@ Each flag configuration object has the following properties:
 }
 ```
 
-In this example:
-- Players with `@css/vip` have priority 0
-- Players with `@css/vipplus` have priority 100
-- VIP Plus players can replace VIP players and regular players
-- VIP players can replace regular players but not VIP Plus players
-- Immunity works the same way: players with higher immunity priority cannot be replaced by players with equal or lower priority
-
 **Example: Disabling Slot Priority and Immunity:**
-To disable slot priority and immunity features, set both arrays to empty:
 ```json
 {
   "QueuePriorityFlag": [],
@@ -175,14 +162,5 @@ To disable slot priority and immunity features, set both arrays to empty:
 | !viewmapconfigs    |                    | Displays a list of available map configs (alias). | @css/root   |
 | !listmapconfigs    |                    | Displays a list of available map configs (alias). | @css/root   |
 
-## Stay up to date
-Subscribe to **release** notifications and stay up to date with the latest features and patches:
-
-![image](https://github.com/B3none/cs2-retakes/assets/24966460/e288a882-0f1f-4e8c-b67f-e4c066af34ea)
-
 ## Credits
-This was inspired by the [CS:GO Retakes project](https://github.com/splewis/csgo-retakes) written by [splewis](https://github.com/splewis).
-
-## Server Hosting (Discounted)
-
-Looking for reliable server hosting? [Dathost](https://dathost.net/r/b3none/cs2-server-hosting) offers top-tier performance, easy server management, and excellent support, with servers available in multiple regions across the globe. Whether you're in North America, Europe, Asia, or anywhere else, [Dathost](https://dathost.net/r/b3none/cs2-server-hosting) has you covered. Use [this link](https://dathost.net/r/b3none/cs2-server-hosting) to get **30% off your first month**. Click [here]( https://dathost.net/r/b3none/cs2-server-hosting) to get started with the discount!
+Originally based on [B3none/cs2-retakes](https://github.com/B3none/cs2-retakes), which was inspired by the [CS:GO Retakes project](https://github.com/splewis/csgo-retakes) by [splewis](https://github.com/splewis).

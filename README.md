@@ -1,5 +1,5 @@
 [![GitHub Downloads](https://img.shields.io/github/downloads/Bjorgeh/cs2-retakes/total.svg?style=flat-square&label=Downloads)](https://github.com/Bjorgeh/cs2-retakes/releases/latest)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Bjorgeh/cs2-retakes/plugin-build.yml?branch=master&style=flat-square&label=Latest%20Build)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Bjorgeh/cs2-retakes/plugin-build.yml?branch=master&style=flat-square&label=Latest%20Build)](https://github.com/Bjorgeh/cs2-retakes/actions/workflows/plugin-build.yml)
 
 # CS2 Retakes
 CS2 retakes plugin written in C# for CounterStrikeSharp. Forked from [B3none/cs2-retakes](https://github.com/B3none/cs2-retakes) with custom features added.

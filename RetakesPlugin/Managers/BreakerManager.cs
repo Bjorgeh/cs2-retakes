@@ -70,10 +70,10 @@ public class BreakerManager
                     continue;
                 }
 
-                // Safety check: ensure handle is valid before dereferencing
+                // Safety check: entity handle may be zeroed in a race with the engine.
                 if (pEntity.Handle == IntPtr.Zero)
                 {
-                    break;
+                    continue;
                 }
 
                 switch (pEntity.DesignerName)

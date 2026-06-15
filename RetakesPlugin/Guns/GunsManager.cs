@@ -5,7 +5,7 @@ using RetakesPlugin.Utils;
 namespace RetakesPlugin.Guns;
 
 /// <summary>In-memory weapon preference for a single player.</summary>
-public record WeaponPreference(string PrimaryT, string PrimaryCT, string Secondary);
+public record WeaponPreference(string PrimaryT, string PrimaryCT, string SecondaryT, string SecondaryCT);
 
 public class GunsManager
 {
@@ -96,6 +96,24 @@ public class GunsManager
         ("Dual Berettas", "weapon_elite"),
     ];
 
+    // ── O(1) display-name lookup ─────────────────────────────────────────────
+
+    public static readonly Dictionary<string, string> WeaponDisplayNames = BuildDisplayNameMap();
+
+    private static Dictionary<string, string> BuildDisplayNameMap()
+    {
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var weapons in PrimaryWeapons_T.Values)
+            foreach (var (name, key) in weapons)
+                map.TryAdd(key, name);
+        foreach (var weapons in PrimaryWeapons_CT.Values)
+            foreach (var (name, key) in weapons)
+                map.TryAdd(key, name);
+        foreach (var (name, key) in SecondaryWeapons)
+            map.TryAdd(key, name);
+        return map;
+    }
+
     // ── Constructor ─────────────────────────────────────────────────────────
 
     public GunsManager(GunsConfig config, string moduleDirectory)
@@ -115,12 +133,16 @@ public class GunsManager
         if (_database == null || player.IsBot) return;
 
         var steamId = player.SteamID;
-        var (pt, pct, sec) = _database.Load(steamId);
+        var (pt, pct, secT, secCT) = _database.Load(steamId);
 
-        if (pt != null && pct != null && sec != null)
+        if (pt != null && pct != null)
         {
-            _preferences[steamId] = new WeaponPreference(pt, pct, sec);
-            Logger.LogInfo("Retakes Guns", $"Loaded weapons for SteamID {steamId}: T={pt} CT={pct} Pistol={sec}");
+            _preferences[steamId] = new WeaponPreference(
+                pt, pct,
+                secT  ?? Config.DefaultSecondary_T,
+                secCT ?? Config.DefaultSecondary_CT
+            );
+            Logger.LogInfo("Retakes Guns", $"Loaded weapons for SteamID {steamId}: T={pt}/{secT} CT={pct}/{secCT}");
         }
     }
 
@@ -134,12 +156,14 @@ public class GunsManager
     public WeaponPreference GetPreference(CCSPlayerController player)
     {
         if (_preferences.TryGetValue(player.SteamID, out var pref))
-        {
             return pref;
-        }
 
-        // Return defaults
-        return new WeaponPreference(Config.DefaultPrimary_T, Config.DefaultPrimary_CT, Config.DefaultSecondary);
+        return new WeaponPreference(
+            Config.DefaultPrimary_T,
+            Config.DefaultPrimary_CT,
+            Config.DefaultSecondary_T,
+            Config.DefaultSecondary_CT
+        );
     }
 
     /// <summary>Returns the primary weapon key for the player's current team,
@@ -147,28 +171,31 @@ public class GunsManager
     public string GetPrimary(CCSPlayerController player)
     {
         var pref = GetPreference(player);
-        var key = player.Team == CsTeam.Terrorist ? pref.PrimaryT : pref.PrimaryCT;
+        var key  = player.Team == CsTeam.Terrorist ? pref.PrimaryT : pref.PrimaryCT;
 
         if (!Config.AllowAWP && key == "weapon_awp")
         {
-            key = player.Team == CsTeam.Terrorist ? Config.DefaultPrimary_T : Config.DefaultPrimary_CT;
+            var fallback = player.Team == CsTeam.Terrorist ? Config.DefaultPrimary_T : Config.DefaultPrimary_CT;
+            // Guard against a misconfigured fallback that is also AWP
+            key = fallback == "weapon_awp" ? (player.Team == CsTeam.Terrorist ? "weapon_ak47" : "weapon_m4a1_silencer") : fallback;
             Logger.LogInfo("Retakes Guns", $"AWP blocked for {player.PlayerName}, falling back to {key}");
         }
 
         return key;
     }
 
+    /// <summary>Returns the secondary weapon key for the player's current team.</summary>
     public string GetSecondary(CCSPlayerController player)
     {
-        return GetPreference(player).Secondary;
+        var pref = GetPreference(player);
+        return player.Team == CsTeam.Terrorist ? pref.SecondaryT : pref.SecondaryCT;
     }
 
     // ── Preference mutation ──────────────────────────────────────────────────
 
     public void SetPrimaryT(CCSPlayerController player, string weaponKey)
     {
-        var current = GetPreference(player);
-        var updated = current with { PrimaryT = weaponKey };
+        var updated = GetPreference(player) with { PrimaryT = weaponKey };
         _preferences[player.SteamID] = updated;
         Persist(player, updated);
         Logger.LogInfo("Retakes Guns", $"Player {player.PlayerName} selected T-primary: {weaponKey}");
@@ -176,20 +203,26 @@ public class GunsManager
 
     public void SetPrimaryCT(CCSPlayerController player, string weaponKey)
     {
-        var current = GetPreference(player);
-        var updated = current with { PrimaryCT = weaponKey };
+        var updated = GetPreference(player) with { PrimaryCT = weaponKey };
         _preferences[player.SteamID] = updated;
         Persist(player, updated);
         Logger.LogInfo("Retakes Guns", $"Player {player.PlayerName} selected CT-primary: {weaponKey}");
     }
 
-    public void SetSecondary(CCSPlayerController player, string weaponKey)
+    public void SetSecondaryT(CCSPlayerController player, string weaponKey)
     {
-        var current = GetPreference(player);
-        var updated = current with { Secondary = weaponKey };
+        var updated = GetPreference(player) with { SecondaryT = weaponKey };
         _preferences[player.SteamID] = updated;
         Persist(player, updated);
-        Logger.LogInfo("Retakes Guns", $"Player {player.PlayerName} selected secondary: {weaponKey}");
+        Logger.LogInfo("Retakes Guns", $"Player {player.PlayerName} selected T-pistol: {weaponKey}");
+    }
+
+    public void SetSecondaryCT(CCSPlayerController player, string weaponKey)
+    {
+        var updated = GetPreference(player) with { SecondaryCT = weaponKey };
+        _preferences[player.SteamID] = updated;
+        Persist(player, updated);
+        Logger.LogInfo("Retakes Guns", $"Player {player.PlayerName} selected CT-pistol: {weaponKey}");
     }
 
     public void ResetPreferences(CCSPlayerController player)
@@ -204,6 +237,6 @@ public class GunsManager
     private void Persist(CCSPlayerController player, WeaponPreference pref)
     {
         if (_database == null || player.IsBot) return;
-        _database.Save(player.SteamID, pref.PrimaryT, pref.PrimaryCT, pref.Secondary);
+        _database.Save(player.SteamID, pref.PrimaryT, pref.PrimaryCT, pref.SecondaryT, pref.SecondaryCT);
     }
 }

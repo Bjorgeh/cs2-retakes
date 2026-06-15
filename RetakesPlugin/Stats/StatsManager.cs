@@ -26,7 +26,7 @@ public class StatsManager
         if (player.IsBot) return;
 
         var steamId = player.SteamID;
-        var stored = _database?.Load(steamId);
+        var stored  = _database?.Load(steamId);
 
         var stats = stored ?? new PlayerStats(steamId, player.PlayerName,
             0, 0, 0, 0, 0, 0, 0, RankSystem.PointsStarting);
@@ -40,54 +40,56 @@ public class StatsManager
     {
         if (_cache.TryGetValue(player.SteamID, out var stats))
         {
-            // Persist final name update in case it changed
             var updated = stats with { PlayerName = player.PlayerName };
             _database?.Save(updated);
             _cache.Remove(player.SteamID);
         }
     }
 
-    // ── Event recording ───────────────────────────────────────────────────────
+    // ── Event recording (cache-only — DB write deferred to round end / disconnect) ──
 
     public void OnKill(CCSPlayerController attacker)
     {
         if (!TryGet(attacker, out var s)) return;
-        Update(attacker, s with { Kills = s.Kills + 1, RankPoints = Clamp(s.RankPoints + RankSystem.PointsPerKill) });
+        UpdateCache(attacker, s with { Kills = s.Kills + 1, RankPoints = Clamp(s.RankPoints + RankSystem.PointsPerKill) });
     }
 
     public void OnDeath(CCSPlayerController victim)
     {
         if (!TryGet(victim, out var s)) return;
-        Update(victim, s with { Deaths = s.Deaths + 1, RankPoints = Clamp(s.RankPoints + RankSystem.PointsPerDeath) });
+        UpdateCache(victim, s with { Deaths = s.Deaths + 1, RankPoints = Clamp(s.RankPoints + RankSystem.PointsPerDeath) });
     }
 
     public void OnAssist(CCSPlayerController assister)
     {
         if (!TryGet(assister, out var s)) return;
-        Update(assister, s with { Assists = s.Assists + 1, RankPoints = Clamp(s.RankPoints + RankSystem.PointsPerAssist) });
+        UpdateCache(assister, s with { Assists = s.Assists + 1, RankPoints = Clamp(s.RankPoints + RankSystem.PointsPerAssist) });
     }
 
     public void OnPlant(CCSPlayerController planter)
     {
         if (!TryGet(planter, out var s)) return;
-        Update(planter, s with { Plants = s.Plants + 1, RankPoints = Clamp(s.RankPoints + RankSystem.PointsPerPlant) });
+        UpdateCache(planter, s with { Plants = s.Plants + 1, RankPoints = Clamp(s.RankPoints + RankSystem.PointsPerPlant) });
     }
 
     public void OnDefuse(CCSPlayerController defuser)
     {
         if (!TryGet(defuser, out var s)) return;
-        Update(defuser, s with { Defuses = s.Defuses + 1, RankPoints = Clamp(s.RankPoints + RankSystem.PointsPerDefuse) });
+        UpdateCache(defuser, s with { Defuses = s.Defuses + 1, RankPoints = Clamp(s.RankPoints + RankSystem.PointsPerDefuse) });
     }
 
-    /// <summary>Call at round end with the winning team.</summary>
-    public void OnRoundEnd(IEnumerable<CCSPlayerController> activePlayers, CsTeam winningTeam)
+    /// <summary>
+    /// Call at round end with the winning team.
+    /// Flushes all dirty stats to the database in one pass.
+    /// </summary>
+    public void OnRoundEnd(IReadOnlyCollection<CCSPlayerController> activePlayers, CsTeam winningTeam)
     {
         foreach (var player in activePlayers)
         {
             if (!PlayerHelper.IsValid(player) || player.IsBot) continue;
             if (!TryGet(player, out var s)) continue;
 
-            var won = player.Team == winningTeam;
+            var won   = player.Team == winningTeam;
             var delta = won ? RankSystem.PointsPerRoundWin : RankSystem.PointsPerRoundLoss;
 
             var updated = s with
@@ -105,7 +107,6 @@ public class StatsManager
             _database?.Save(updated);
             ApplyScoreboard(player, updated);
 
-            // Announce rank-up / rank-down in chat
             if (newRank.Id > oldRank.Id)
                 player.PrintToChat($" \x04[Retakes Rank]\x01 Rank up! \x06{newRank.Name}\x01 ({updated.RankPoints} pts)");
             else if (newRank.Id < oldRank.Id)
@@ -126,25 +127,13 @@ public class StatsManager
 
     // ── Scoreboard ────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Sets clan tag and CompetitiveRanking so the CS2 rank icon
-    /// and a short rank label appear in the Tab scoreboard.
-    /// </summary>
     public static void ApplyScoreboard(CCSPlayerController player, PlayerStats stats)
     {
         if (!PlayerHelper.IsValid(player)) return;
 
         var rank = RankSystem.GetRank(stats.RankPoints);
-
-        // Clan tag shows next to name in Tab list
-        player.Clan = $"[{rank.ShortName}]";
-
-        // CS2 native rank icon (0-18 maps to S1–GE)
+        player.Clan              = $"[{rank.ShortName}]";
         player.CompetitiveRanking = rank.Id;
-
-        // Rank points shown as the "score" column while in a round
-        // (we only write this when not in a live round to avoid interfering
-        //  with Retakes' own score tracking)
         Utilities.SetStateChanged(player, "CCSPlayerController", "m_szClan");
     }
 
@@ -157,11 +146,10 @@ public class StatsManager
         return _cache.TryGetValue(player.SteamID, out stats!);
     }
 
-    private void Update(CCSPlayerController player, PlayerStats updated)
+    // Cache-only update; DB flush happens at round end and on disconnect.
+    private void UpdateCache(CCSPlayerController player, PlayerStats updated)
     {
         _cache[player.SteamID] = updated;
-        // Persist incrementally so we don't lose data on crash
-        _database?.Save(updated);
         ApplyScoreboard(player, updated);
     }
 

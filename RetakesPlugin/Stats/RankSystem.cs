@@ -60,9 +60,10 @@ public static class RankSystem
     public static int PointsToNextRank(int points)
     {
         var current = GetRank(points);
-        if (current.Id >= Ranks[^1].Id) return 0;
-        var next = Ranks[current.Id + 1];
-        return next.MinPoints - points;
+        // Use Array.IndexOf so this is safe even if Id values are ever reordered.
+        var idx = Array.IndexOf(Ranks, current);
+        if (idx < 0 || idx >= Ranks.Length - 1) return 0;
+        return Ranks[idx + 1].MinPoints - points;
     }
 }
 

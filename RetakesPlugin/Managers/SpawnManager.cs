@@ -119,11 +119,14 @@ public class SpawnManager
 
             var spawn = player == planter ? randomPlanterSpawn : spawns[team][_random.Next(count)];
 
+            // Always consume the spawn slot so no two players share the same position.
+            if (player != planter)
+                spawns[team].Remove(spawn);
+
             // Revalidate pawn before teleporting - it may have been invalidated
             if (player.PlayerPawn.IsValid && player.PlayerPawn.Value != null)
             {
                 player.PlayerPawn.Value.Teleport(spawn.Vector, spawn.QAngle, new Vector());
-                spawns[team].Remove(spawn);
             }
             else
             {

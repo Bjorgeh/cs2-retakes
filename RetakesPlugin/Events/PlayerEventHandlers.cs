@@ -109,7 +109,7 @@ public class PlayerEventHandlers
         if (PlayerHelper.IsValid(attacker))
         {
             _gameManager.AddKill(attacker);
-            if (attacker != victim)
+            if (PlayerHelper.IsValid(victim) && attacker.SteamID != victim!.SteamID)
                 _statsManager?.OnKill(attacker);
         }
 

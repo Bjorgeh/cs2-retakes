@@ -228,7 +228,7 @@ public class RoundEventHandlers
         Logger.LogInfo("Round", $"Round ended. Winner: {_lastRoundWinner}");
 
         if (_statsManager != null && _lastRoundWinner != CsTeam.None)
-            _statsManager.OnRoundEnd(_gameManager.QueueManager.ActivePlayers, _lastRoundWinner);
+            _statsManager.OnRoundEnd(_gameManager.QueueManager.ActivePlayers.ToList(), _lastRoundWinner);
 
         return HookResult.Continue;
     }

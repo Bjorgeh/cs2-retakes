@@ -17,12 +17,14 @@ public static class GunsMenu
         var current = gunsManager.GetPreference(player);
 
         var menu = new ChatMenu(" \x04[Retakes Guns]\x01 Weapon Selection");
-        menu.AddMenuOption($"T-Side Primary  [{GetDisplayName(current.PrimaryT)}]",
+        menu.AddMenuOption($"T-Side Primary  [{DisplayName(current.PrimaryT)}]",
             (p, _) => OpenPrimaryCategory(p, gunsManager, isTSide: true));
-        menu.AddMenuOption($"CT-Side Primary [{GetDisplayName(current.PrimaryCT)}]",
+        menu.AddMenuOption($"CT-Side Primary [{DisplayName(current.PrimaryCT)}]",
             (p, _) => OpenPrimaryCategory(p, gunsManager, isTSide: false));
-        menu.AddMenuOption($"Pistol          [{GetDisplayName(current.Secondary)}]",
-            (p, _) => OpenSecondaryMenu(p, gunsManager));
+        menu.AddMenuOption($"T-Side Pistol   [{DisplayName(current.SecondaryT)}]",
+            (p, _) => OpenSecondaryMenu(p, gunsManager, isTSide: true));
+        menu.AddMenuOption($"CT-Side Pistol  [{DisplayName(current.SecondaryCT)}]",
+            (p, _) => OpenSecondaryMenu(p, gunsManager, isTSide: false));
 
         MenuManager.OpenChatMenu(player, menu);
     }
@@ -57,9 +59,7 @@ public static class GunsMenu
         var catalogue = isTSide ? GunsManager.PrimaryWeapons_T : GunsManager.PrimaryWeapons_CT;
 
         if (!catalogue.TryGetValue(category, out var weapons))
-        {
             return;
-        }
 
         var menu = new ChatMenu($" \x04[Retakes Guns]\x01 {sideLabel} Primary — {category}");
         foreach (var (displayName, weaponKey) in weapons)
@@ -68,20 +68,16 @@ public static class GunsMenu
             var capturedName = displayName;
 
             // Disable AWP option when server has it blocked
-            var isAwp     = weaponKey == "weapon_awp";
-            var disabled  = isAwp && !gunsManager.Config.AllowAWP;
-            var label     = disabled ? $"{displayName} [disabled]" : displayName;
+            var disabled = weaponKey == "weapon_awp" && !gunsManager.Config.AllowAWP;
+            var label    = disabled ? $"{displayName} [disabled]" : displayName;
 
             menu.AddMenuOption(label, (p, _) =>
             {
+                if (disabled) return;
                 if (isTSide)
-                {
                     gunsManager.SetPrimaryT(p, capturedKey);
-                }
                 else
-                {
                     gunsManager.SetPrimaryCT(p, capturedKey);
-                }
 
                 p.PrintToChat($" \x04[Retakes Guns]\x01 {sideLabel} primary set to \x06{capturedName}\x01.");
             }, disabled);
@@ -92,17 +88,23 @@ public static class GunsMenu
 
     // ── Secondary / pistol menu ──────────────────────────────────────────────
 
-    private static void OpenSecondaryMenu(CCSPlayerController player, GunsManager gunsManager)
+    private static void OpenSecondaryMenu(CCSPlayerController player, GunsManager gunsManager, bool isTSide)
     {
-        var menu = new ChatMenu(" \x04[Retakes Guns]\x01 Pistol");
+        var sideLabel = isTSide ? "T-Side" : "CT-Side";
+        var menu = new ChatMenu($" \x04[Retakes Guns]\x01 {sideLabel} Pistol");
+
         foreach (var (displayName, weaponKey) in GunsManager.SecondaryWeapons)
         {
             var capturedKey  = weaponKey;
             var capturedName = displayName;
             menu.AddMenuOption(displayName, (p, _) =>
             {
-                gunsManager.SetSecondary(p, capturedKey);
-                p.PrintToChat($" \x04[Retakes Guns]\x01 Pistol set to \x06{capturedName}\x01.");
+                if (isTSide)
+                    gunsManager.SetSecondaryT(p, capturedKey);
+                else
+                    gunsManager.SetSecondaryCT(p, capturedKey);
+
+                p.PrintToChat($" \x04[Retakes Guns]\x01 {sideLabel} pistol set to \x06{capturedName}\x01.");
             });
         }
 
@@ -111,25 +113,6 @@ public static class GunsMenu
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    /// <summary>Returns a short human-readable name for a weapon key.</summary>
-    private static string GetDisplayName(string weaponKey)
-    {
-        // Search all catalogues for a matching key
-        foreach (var weapons in GunsManager.PrimaryWeapons_T.Values)
-        {
-            var match = weapons.FirstOrDefault(w => w.WeaponKey == weaponKey);
-            if (match.WeaponKey != null) return match.DisplayName;
-        }
-
-        foreach (var weapons in GunsManager.PrimaryWeapons_CT.Values)
-        {
-            var match = weapons.FirstOrDefault(w => w.WeaponKey == weaponKey);
-            if (match.WeaponKey != null) return match.DisplayName;
-        }
-
-        var sec = GunsManager.SecondaryWeapons.FirstOrDefault(w => w.WeaponKey == weaponKey);
-        if (sec.WeaponKey != null) return sec.DisplayName;
-
-        return weaponKey;
-    }
+    private static string DisplayName(string weaponKey)
+        => GunsManager.WeaponDisplayNames.TryGetValue(weaponKey, out var name) ? name : weaponKey;
 }

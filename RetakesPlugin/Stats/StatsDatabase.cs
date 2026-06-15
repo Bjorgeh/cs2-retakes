@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using Microsoft.Data.Sqlite;
 using RetakesPlugin.Utils;
 
@@ -21,51 +20,8 @@ public class StatsDatabase
 {
     private readonly string _connectionString;
 
-    // ── Native bootstrap (reuses GunsDatabase resolver if already set) ───────
-    private static bool _nativeInitialized;
-    private static readonly object _nativeLock = new();
-
     public static void InitializeNative(string pluginDirectory)
-    {
-        lock (_nativeLock)
-        {
-            if (_nativeInitialized) return;
-            _nativeInitialized = true;
-        }
-
-        try
-        {
-            var providerAssembly = typeof(SQLitePCL.SQLite3Provider_e_sqlite3).Assembly;
-            NativeLibrary.SetDllImportResolver(providerAssembly, (libraryName, _, _) =>
-            {
-                if (libraryName != "e_sqlite3") return IntPtr.Zero;
-
-                string[] candidates =
-                [
-                    Path.Combine(pluginDirectory, "libe_sqlite3.so"),
-                    Path.Combine(pluginDirectory, "runtimes", "linux-x64", "native", "libe_sqlite3.so"),
-                ];
-
-                foreach (var path in candidates)
-                {
-                    if (File.Exists(path))
-                        return NativeLibrary.Load(path);
-                }
-
-                return IntPtr.Zero;
-            });
-
-            SQLitePCL.Batteries_V2.Init();
-        }
-        catch (InvalidOperationException)
-        {
-            // Resolver already registered by GunsDatabase – that's fine
-        }
-        catch (Exception ex)
-        {
-            Logger.LogException("Retakes Stats", ex);
-        }
-    }
+        => SQLiteBootstrap.Initialize(pluginDirectory);
 
     // ── Instance ──────────────────────────────────────────────────────────────
 

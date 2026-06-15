@@ -233,6 +233,9 @@ public class RoundEventHandlers
         return HookResult.Continue;
     }
 
+    private const float BombTimerTotal   = 40f;
+    private const float BombTimerWarning = 10f;
+
     public HookResult OnBombPlanted(EventBombPlanted @event, GameEventInfo info)
     {
         Logger.LogInfo("Round", "Bomb planted");
@@ -244,6 +247,25 @@ public class RoundEventHandlers
         {
             _announcementService.AnnounceBombsite(_currentBombsite, true);
         });
+
+        // Find the planted C4 now and capture its handle so the delayed timer only
+        // affects THIS bomb (not a new bomb planted in a future round).
+        var plantedC4 = Utilities.FindAllEntitiesByDesignerName<CPlantedC4>("planted_c4")
+            .FirstOrDefault(c => c.IsValid && c.BombTicking && !c.HasExploded);
+
+        if (plantedC4 != null)
+        {
+            var bombHandle = plantedC4.Handle;
+            _plugin.AddTimer(BombTimerTotal - BombTimerWarning, () =>
+            {
+                var c4 = Utilities.FindAllEntitiesByDesignerName<CPlantedC4>("planted_c4")
+                    .FirstOrDefault(c => c.IsValid && c.Handle == bombHandle && c.BombTicking && !c.HasExploded);
+                if (c4 == null) return;
+
+                c4.C4Blow = Server.CurrentTime + BombTimerWarning;
+                Logger.LogInfo("Round", "Bomb danger timer activated — 10 seconds remaining");
+            });
+        }
 
         return HookResult.Continue;
     }

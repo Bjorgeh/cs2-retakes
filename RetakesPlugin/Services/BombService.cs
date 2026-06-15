@@ -56,10 +56,9 @@ public class BombService
         plantedC4.DispatchSpawn();
 
         // Set timer AFTER spawn so the engine's mp_c4timer default doesn't override us.
-        // 10 seconds: the danger music plays immediately and all non-danger music is skipped.
-        // Insta-defuse kicks in when all Ts die, so CTs rarely need to manually defuse within 10s.
-        plantedC4.TimerLength = 10f;
-        plantedC4.C4Blow = Server.CurrentTime + 10f;
+        // 9999 seconds: bomb never explodes during a retakes round; no countdown music plays.
+        plantedC4.TimerLength = 9999f;
+        plantedC4.C4Blow = Server.CurrentTime + 9999f;
 
         // Revalidate player before continuing - validity may have expired
         if (!player.IsValid || player.PlayerPawn.Value == null)

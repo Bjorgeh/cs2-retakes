@@ -233,9 +233,6 @@ public class RoundEventHandlers
         return HookResult.Continue;
     }
 
-    private const float BombTimerTotal   = 40f;
-    private const float BombTimerWarning = 10f;
-
     public HookResult OnBombPlanted(EventBombPlanted @event, GameEventInfo info)
     {
         Logger.LogInfo("Round", "Bomb planted");
@@ -247,36 +244,6 @@ public class RoundEventHandlers
         {
             _announcementService.AnnounceBombsite(_currentBombsite, true);
         });
-
-        // Find the planted C4 now and capture its handle so the delayed timer only
-        // affects THIS bomb (not a new bomb planted in a future round).
-        var plantedC4 = Utilities.FindAllEntitiesByDesignerName<CPlantedC4>("planted_c4")
-            .FirstOrDefault(c => c.IsValid && c.BombTicking && !c.HasExploded);
-
-        if (plantedC4 != null)
-        {
-            var bombHandle = plantedC4.Handle;
-
-            // t=30: switch C4Blow to trigger 10-second danger music (beeping gets faster toward C4Blow)
-            _plugin.AddTimer(BombTimerTotal - BombTimerWarning, () =>
-            {
-                var c4 = Utilities.FindAllEntitiesByDesignerName<CPlantedC4>("planted_c4")
-                    .FirstOrDefault(c => c.IsValid && c.Handle == bombHandle && c.BombTicking && !c.HasExploded);
-                if (c4 == null) return;
-                c4.C4Blow = Server.CurrentTime + BombTimerWarning;
-                Logger.LogInfo("Round", "Bomb danger timer activated — 10 seconds remaining");
-            });
-
-            // t=40: engine Think is rescheduled to 9999s and won't fire in time — force T win ourselves
-            _plugin.AddTimer(BombTimerTotal, () =>
-            {
-                var c4 = Utilities.FindAllEntitiesByDesignerName<CPlantedC4>("planted_c4")
-                    .FirstOrDefault(c => c.IsValid && c.Handle == bombHandle && c.BombTicking && !c.HasExploded);
-                if (c4 == null) return;
-                Logger.LogInfo("Round", "Bomb timer expired — forcing T win");
-                GameRulesHelper.TerminateRound(CounterStrikeSharp.API.Modules.Entities.Constants.RoundEndReason.TargetBombed);
-            });
-        }
 
         return HookResult.Continue;
     }

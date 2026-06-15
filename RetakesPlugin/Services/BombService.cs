@@ -55,11 +55,6 @@ public class BombService
 
         plantedC4.DispatchSpawn();
 
-        // Set timer AFTER spawn so the engine's mp_c4timer default doesn't override us.
-        // 9999 seconds: bomb never explodes during a retakes round; no countdown music plays.
-        plantedC4.TimerLength = 9999f;
-        plantedC4.C4Blow = Server.CurrentTime + 9999f;
-
         // Revalidate player before continuing - validity may have expired
         if (!player.IsValid || player.PlayerPawn.Value == null)
         {

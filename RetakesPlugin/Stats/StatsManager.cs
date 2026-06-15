@@ -1,5 +1,6 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Utils;
 using RetakesPlugin.Utils;
 
@@ -127,14 +128,27 @@ public class StatsManager
 
     // ── Scoreboard ────────────────────────────────────────────────────────────
 
+    private const string AdminSuffix = " [ADMIN]";
+
     public static void ApplyScoreboard(CCSPlayerController player, PlayerStats stats)
     {
         if (!PlayerHelper.IsValid(player)) return;
 
         var rank = RankSystem.GetRank(stats.RankPoints);
-        player.Clan              = $"[{rank.ShortName}]";
+        player.Clan               = $"[{rank.ShortName}]";
         player.CompetitiveRanking = rank.Id;
         Utilities.SetStateChanged(player, "CCSPlayerController", "m_szClan");
+
+        // Strip any existing admin suffix first (idempotency), then re-apply if still admin.
+        var baseName = player.PlayerName.EndsWith(AdminSuffix)
+            ? player.PlayerName[..^AdminSuffix.Length]
+            : player.PlayerName;
+
+        var isAdmin  = AdminManager.PlayerHasPermissions(player, "@css/root");
+        var newName  = isAdmin ? baseName + AdminSuffix : baseName;
+
+        if (player.PlayerName != newName)
+            player.PlayerName = newName;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

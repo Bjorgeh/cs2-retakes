@@ -1,5 +1,7 @@
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Admin;
+using CounterStrikeSharp.API.Modules.Entities.Constants;
 using CounterStrikeSharp.API.Modules.Utils;
 
 using RetakesPlugin.Guns;
@@ -122,7 +124,30 @@ public class PlayerEventHandlers
             _statsManager?.OnAssist(assister);
         }
 
+        if (PlayerHelper.IsValid(victim) && victim.Team == CsTeam.Terrorist)
+            _plugin.AddTimer(0.1f, CheckAndTriggerInstantDefuse);
+
         return HookResult.Continue;
+    }
+
+    private void CheckAndTriggerInstantDefuse()
+    {
+        var gameRules = GameRulesHelper.GetGameRulesOrNull();
+        if (gameRules == null || gameRules.WarmupPeriod)
+            return;
+
+        var plantedC4 = Utilities.FindAllEntitiesByDesignerName<CPlantedC4>("planted_c4")
+            .FirstOrDefault(c => c.IsValid && c.BombTicking && !c.HasExploded);
+        if (plantedC4 == null)
+            return;
+
+        var aliveTerrorists = Utilities.GetPlayers()
+            .Count(p => PlayerHelper.IsValid(p) && p.Team == CsTeam.Terrorist && p.PawnIsAlive);
+        if (aliveTerrorists > 0)
+            return;
+
+        Logger.LogInfo("InstantDefuse", "All Ts eliminated with bomb planted — triggering instant defuse");
+        GameRulesHelper.TerminateRound(RoundEndReason.BombDefused);
     }
 
     public HookResult OnPlayerDisconnect(EventPlayerDisconnect @event, GameEventInfo info)

@@ -101,10 +101,12 @@ public class QueueManager
             return HookResult.Handled;
         }
 
+        RemoveDisconnectedPlayers();
+        var isWarmup = GameRulesHelper.GetGameRulesOrNull()?.WarmupPeriod ?? false;
+
         if (!QueuePlayers.Contains(player))
         {
-            var gameRules = GameRulesHelper.GetGameRulesOrNull();
-            if ((gameRules?.WarmupPeriod ?? false) && ActivePlayers.Count < _maxRetakesPlayers)
+            if (isWarmup && ActivePlayers.Count < _maxRetakesPlayers)
             {
                 Logger.LogInfo("QueueManager", $"[{player.PlayerName}] Added to active players (warmup)");
                 ActivePlayers.Add(player);
@@ -114,6 +116,17 @@ public class QueueManager
             Logger.LogInfo("QueueManager", $"[{player.PlayerName}] Added to queue");
             player.PrintToChat($"{_plugin.Localizer["retakes.prefix"]} {_plugin.Localizer["retakes.queue.joined"]}");
             QueuePlayers.Add(player);
+        }
+        else if (isWarmup && ActivePlayers.Count < _maxRetakesPlayers)
+        {
+            QueuePlayers.Remove(player);
+            ActivePlayers.Add(player);
+            Logger.LogInfo("QueueManager", $"[{player.PlayerName}] Promoted from queue to active (warmup)");
+            return HookResult.Continue;
+        }
+        else
+        {
+            player.PrintToChat($"{_plugin.Localizer["retakes.prefix"]} {_plugin.Localizer["retakes.queue.in_queue"]}");
         }
 
         GameRulesHelper.CheckRoundDone();

@@ -4,3 +4,8 @@
 /RetakesPluginShared/.idea
 *.DotSettings.user
 *.sln
+
+# Build artifacts
+bin/
+obj/
+publish/

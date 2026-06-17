@@ -130,6 +130,7 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
         RegisterEventHandler<EventPlayerDeath>(OnPlayerDeath);
         RegisterEventHandler<EventBombPlanted>(OnBombPlanted, HookMode.Pre);
         RegisterEventHandler<EventBombDefused>(OnBombDefused);
+        RegisterEventHandler<EventBombBegindefuse>(OnBombBeginDefuse);
         RegisterEventHandler<EventPlayerDisconnect>(OnPlayerDisconnect, HookMode.Pre);
         RegisterEventHandler<EventPlayerTeam>(OnPlayerTeam, HookMode.Pre);
 
@@ -394,6 +395,11 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
     private HookResult OnBombDefused(EventBombDefused @event, GameEventInfo info)
     {
         return _roundEventHandlers?.OnBombDefused(@event, info) ?? HookResult.Continue;
+    }
+
+    private HookResult OnBombBeginDefuse(EventBombBegindefuse @event, GameEventInfo info)
+    {
+        return _roundEventHandlers?.OnBombBeginDefuse(@event, info) ?? HookResult.Continue;
     }
 
     private HookResult OnPlayerDisconnect(EventPlayerDisconnect @event, GameEventInfo info)

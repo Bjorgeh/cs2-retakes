@@ -1,5 +1,6 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Entities.Constants;
 using CounterStrikeSharp.API.Modules.Utils;
 
 using RetakesPlugin.Utils;
@@ -31,6 +32,7 @@ public class RoundEventHandlers
     private CCSPlayerController? _planter;
     private CsTeam _lastRoundWinner = CsTeam.None;
     private Bombsite? _forcedBombsite;
+    private float _bombPlantTime;
 
     public RoundEventHandlers(RetakesPlugin plugin, GameManager gameManager, SpawnManager spawnManager, BreakerManager? breakerManager, AllocationService allocationService, AnnouncementService announcementService, bool isAutoPlantEnabled, bool enableFallbackAllocation, bool enableFallbackBombsiteAnnouncement, Random random)
     {
@@ -236,6 +238,7 @@ public class RoundEventHandlers
     public HookResult OnBombPlanted(EventBombPlanted @event, GameEventInfo info)
     {
         Logger.LogInfo("Round", "Bomb planted");
+        _bombPlantTime = Server.CurrentTime;
 
         if (_planter != null && PlayerHelper.IsValid(_planter))
             _statsManager?.OnPlant(_planter);
@@ -259,6 +262,37 @@ public class RoundEventHandlers
         }
 
         Logger.LogInfo("Round", $"Bomb defused by {player?.PlayerName ?? "unknown"}");
+        return HookResult.Continue;
+    }
+
+    public HookResult OnBombBeginDefuse(EventBombBegindefuse @event, GameEventInfo info)
+    {
+        var player = @event.Userid;
+        if (!PlayerHelper.IsValid(player) || !player.PawnIsAlive)
+            return HookResult.Continue;
+
+        var gameRules = GameRulesHelper.GetGameRulesOrNull();
+        if (gameRules == null || gameRules.WarmupPeriod)
+            return HookResult.Continue;
+
+        var plantedC4 = Utilities.FindAllEntitiesByDesignerName<CPlantedC4>("planted_c4")
+            .FirstOrDefault(c => c.IsValid && c.BombTicking && !c.HasExploded);
+        if (plantedC4 == null)
+            return HookResult.Continue;
+
+        var aliveTerrorists = Utilities.GetPlayers()
+            .Count(p => PlayerHelper.IsValid(p) && p.Team == CsTeam.Terrorist && p.PawnIsAlive);
+        if (aliveTerrorists > 0)
+            return HookResult.Continue;
+
+        var defuseTime = @event.HasKit ? 5.0f : 10.0f;
+        var timeRemaining = plantedC4.TimerLength - (Server.CurrentTime - _bombPlantTime);
+
+        if (timeRemaining < defuseTime)
+            return HookResult.Continue;
+
+        Logger.LogInfo("InstantDefuse", $"{player.PlayerName} started defuse with {timeRemaining:F1}s remaining (needs {defuseTime}s), all Ts dead — triggering instant defuse");
+        GameRulesHelper.TerminateRound(RoundEndReason.BombDefused);
         return HookResult.Continue;
     }
 

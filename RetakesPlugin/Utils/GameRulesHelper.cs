@@ -44,6 +44,10 @@ public static class GameRulesHelper
 
     public static void CheckRoundDone()
     {
+        var gameRules = GetGameRulesOrNull();
+        if (gameRules == null || gameRules.WarmupPeriod)
+            return;
+
         var tHumanCount = PlayerHelper.GetPlayerCount(CsTeam.Terrorist);
         var ctHumanCount = PlayerHelper.GetPlayerCount(CsTeam.CounterTerrorist);
 

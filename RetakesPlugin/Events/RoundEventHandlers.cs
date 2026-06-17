@@ -139,7 +139,16 @@ public class RoundEventHandlers
         _currentBombsite = _forcedBombsite ?? (_random.Next(0, 2) == 0 ? Bombsite.A : Bombsite.B);
         _gameManager.ResetPlayerScores();
 
-        _planter = _spawnManager.HandleRoundSpawns(_currentBombsite, _gameManager.QueueManager.ActivePlayers);
+        try
+        {
+            _planter = _spawnManager.HandleRoundSpawns(_currentBombsite, _gameManager.QueueManager.ActivePlayers);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Round", $"Failed to handle round spawns: {ex.Message}");
+            GameRulesHelper.TerminateRound(CounterStrikeSharp.API.Modules.Entities.Constants.RoundEndReason.RoundDraw);
+            return HookResult.Continue;
+        }
 
         if (_enableFallbackBombsiteAnnouncement)
         {

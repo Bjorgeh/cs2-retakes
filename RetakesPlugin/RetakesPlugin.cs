@@ -94,6 +94,7 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
 
     #region State
     private readonly HashSet<CCSPlayerController> _hasMutedVoices = [];
+    private bool _commandsRegistered;
     #endregion
 
     public RetakesPlugin()
@@ -274,6 +275,14 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
             // Register all commands
             RegisterCommands();
 
+            // Re-load already-connected players into new manager instances (map change scenario)
+            foreach (var player in Utilities.GetPlayers())
+            {
+                if (!Utils.PlayerHelper.IsValid(player) || player.IsBot) continue;
+                _gunsManager?.LoadPlayer(player);
+                _statsManager?.LoadPlayer(player);
+            }
+
             Utils.Logger.LogInfo("Services", "All services initialized successfully");
         }
         catch (Exception ex)
@@ -284,11 +293,15 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
 
     private void RegisterCommands()
     {
+        if (_commandsRegistered) return;
+
         if (_forceBombsiteCommand == null || _forceBombsiteStopCommand == null || _scrambleCommand == null || _debugQueuesCommand == null || _mapConfigCommand == null || _mapConfigsCommand == null || _voicesCommand == null || _showSpawnsCommand == null || _addSpawnCommand == null || _removeSpawnCommand == null || _nearestSpawnCommand == null || _hideSpawnsCommand == null)
         {
             Utils.Logger.LogWarning("Commands", "Cannot register commands - command handlers not initialized");
             return;
         }
+
+        _commandsRegistered = true;
 
         // Admin Commands
         AddCommand("css_forcebombsite", "Force the retakes to occur from a single bombsite.", _forceBombsiteCommand.OnCommand);

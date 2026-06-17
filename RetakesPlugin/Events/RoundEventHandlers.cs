@@ -294,7 +294,7 @@ public class RoundEventHandlers
         if (aliveTerrorists > 0)
             return HookResult.Continue;
 
-        var defuseTime = @event.HasKit ? 5.0f : 10.0f;
+        var defuseTime = @event.Haskit ? 5.0f : 10.0f;
         var timeRemaining = plantedC4.TimerLength - (Server.CurrentTime - _bombPlantTime);
 
         if (timeRemaining < defuseTime)

@@ -339,20 +339,20 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
         // Player Commands
         AddCommand("css_voices", "Toggles whether or not you want to hear bombsite voice announcements.", _voicesCommand.OnCommand);
 
-        // Guns Commands
+        // Guns Commands — use lambdas so map changes (which replace _gunsCommand) are always picked up
         if (_gunsCommand != null)
         {
-            AddCommand("css_guns",      "Opens the weapon selection menu.",              _gunsCommand.OnGunsCommand);
-            AddCommand("css_myguns",    "Displays your current weapon selections.",      _gunsCommand.OnMyGunsCommand);
-            AddCommand("css_resetguns", "Resets your weapon selections to defaults.",    _gunsCommand.OnResetGunsCommand);
+            AddCommand("css_guns",      "Opens the weapon selection menu.",              (p, c) => _gunsCommand?.OnGunsCommand(p, c));
+            AddCommand("css_myguns",    "Displays your current weapon selections.",      (p, c) => _gunsCommand?.OnMyGunsCommand(p, c));
+            AddCommand("css_resetguns", "Resets your weapon selections to defaults.",    (p, c) => _gunsCommand?.OnResetGunsCommand(p, c));
         }
 
-        // Rank Commands
+        // Rank Commands — same reason: _rankCommand is replaced on every map change
         if (_rankCommand != null)
         {
-            AddCommand("css_rank",  "Shows your current rank and stats.",  _rankCommand.OnRankCommand);
-            AddCommand("css_top",   "Shows the top 10 players by rank.",   _rankCommand.OnTopCommand);
-            AddCommand("css_stats", "Shows your current rank and stats.",  _rankCommand.OnRankCommand);
+            AddCommand("css_rank",  "Shows your current rank and stats.",  (p, c) => _rankCommand?.OnRankCommand(p, c));
+            AddCommand("css_top",   "Shows the top 10 players by rank.",   (p, c) => _rankCommand?.OnTopCommand(p, c));
+            AddCommand("css_stats", "Shows your current rank and stats.",  (p, c) => _rankCommand?.OnRankCommand(p, c));
         }
 
         Utils.Logger.LogInfo("Commands", "All commands registered successfully");

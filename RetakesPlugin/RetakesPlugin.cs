@@ -453,7 +453,7 @@ public class RetakesPlugin : BasePlugin, IPluginConfig<BaseConfigs>
             Utils.Logger.LogDebug("Commands", "No active players, updating queue and restarting game");
             _gameManager.QueueManager.ClearRoundTeams();
             _gameManager.QueueManager.Update();
-            GameRulesHelper.RestartGame();
+            GameRulesHelper.CheckRoundDone();
         }
 
         return response;

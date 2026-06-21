@@ -113,6 +113,14 @@ public class QueueManager
                 return HookResult.Continue;
             }
 
+            if (!isWarmup && ActivePlayers.Count == 0)
+            {
+                Logger.LogInfo("QueueManager", $"[{player.PlayerName}] First player on empty server, adding to active and restarting");
+                ActivePlayers.Add(player);
+                _plugin.AddTimer(0.5f, GameRulesHelper.RestartGame);
+                return HookResult.Continue;
+            }
+
             Logger.LogInfo("QueueManager", $"[{player.PlayerName}] Added to queue");
             player.PrintToChat($"{_plugin.Localizer["retakes.prefix"]} {_plugin.Localizer["retakes.queue.joined"]}");
             QueuePlayers.Add(player);

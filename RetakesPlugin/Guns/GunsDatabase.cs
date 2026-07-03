@@ -103,8 +103,8 @@ public class GunsDatabase
             conn.Open();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-                INSERT INTO PlayerWeapons (SteamID, PrimaryT, PrimaryCT, SecondaryT, SecondaryCT, UpdatedAt)
-                VALUES (@id, @pt, @pct, @st, @sct, @at)
+                INSERT INTO PlayerWeapons (SteamID, PrimaryT, PrimaryCT, Secondary, SecondaryT, SecondaryCT, UpdatedAt)
+                VALUES (@id, @pt, @pct, '', @st, @sct, @at)
                 ON CONFLICT(SteamID) DO UPDATE SET
                     PrimaryT    = excluded.PrimaryT,
                     PrimaryCT   = excluded.PrimaryCT,

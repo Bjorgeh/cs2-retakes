@@ -70,21 +70,39 @@ public static class GameRulesHelper
         {
             gameRules.TerminateRound(0.1f, roundEndReason);
         }
-        catch
+        catch (Exception ex)
         {
             Logger.LogWarning("GameRules",
-                "Incorrect signature detected (Can't use TerminateRound), killing all alive players instead.");
+                $"TerminateRound threw ({ex.GetType().Name}: {ex.Message}), falling back to killing the losing team's players.");
 
-            var alivePlayers = Utilities.GetPlayers()
+            // Only kill the side that's supposed to lose this round - killing everyone
+            // (including the side that just won, e.g. CTs after a defuse) is wrong.
+            var losingTeam = GetLosingTeam(roundEndReason);
+            var playersToKill = Utilities.GetPlayers()
                 .Where(PlayerHelper.IsValid)
                 .Where(player => player.PawnIsAlive)
+                .Where(player => losingTeam == null || player.Team == losingTeam)
                 .ToList();
 
-            foreach (var player in alivePlayers)
+            foreach (var player in playersToKill)
             {
                 player.CommitSuicide(false, true);
             }
         }
+    }
+
+    // Returns the team whose alive players should die to force the round to end with the
+    // given reason, or null if it's not win/loss-specific (e.g. a draw) and everyone should die.
+    private static CsTeam? GetLosingTeam(RoundEndReason roundEndReason)
+    {
+        return roundEndReason switch
+        {
+            RoundEndReason.BombDefused => CsTeam.Terrorist,
+            RoundEndReason.CTsWin => CsTeam.Terrorist,
+            RoundEndReason.TerroristsWin => CsTeam.CounterTerrorist,
+            RoundEndReason.TargetBombed => CsTeam.CounterTerrorist,
+            _ => null,
+        };
     }
 
     public static double GetDistanceBetweenVectors(Vector v1, Vector v2)
